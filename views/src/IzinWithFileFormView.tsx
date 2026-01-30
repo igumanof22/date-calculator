@@ -14,6 +14,8 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
     const jamMulai = watch('jamMulai');
     const jamSelesai = watch('jamSelesai');
     const uploadedFile = watch('uploadedFile');
+    const durasiJam = watch('durasiJam') || 0;
+    const durasiHari = watch('durasiHari') || 0;
 
     // Calculate minimum date allowed
     const getMinDate = () => {
@@ -82,6 +84,10 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
 
             while (currentHour <= 17) {
                 if (currentHour === 17 && currentMinute > 0) break;
+                if (currentHour === 12) {
+                    currentHour += 1;
+                    continue;
+                }
                 times.push(`${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`);
                 currentMinute += 30;
                 if (currentMinute >= 60) {
@@ -111,6 +117,10 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
 
         while (currentHour <= 17) {
             if (currentHour === 17 && currentMinute > 0) break;
+            if (currentHour === 12) {
+                currentHour += 1;
+                continue;
+            }
             times.push(`${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`);
             currentMinute += 30;
             if (currentMinute >= 60) {
@@ -167,6 +177,11 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
                 const [startHour, startMin] = jamMulai.split(':').map(Number);
                 const [endHour, endMin] = jamSelesai.split(':').map(Number);
 
+                let breakTime = 1;
+                if (startHour >= 12) {
+                    breakTime = 0;
+                }
+
                 start.setHours(startHour, startMin, 0, 0);
                 end.setHours(endHour, endMin, 0, 0);
 
@@ -174,7 +189,7 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
                 let diffHours = diffTime / (1000 * 60 * 60); // Convert to hours
 
                 // Subtract 1 hour for lunch break (istirahat)
-                diffHours = Math.max(0, diffHours - 1);
+                diffHours = Math.max(0, diffHours - breakTime);
 
                 setValue('durasiJam', Math.round(diffHours * 10) / 10); // Round to 1 decimal
                 setValue('durasiHari', 0);
@@ -223,22 +238,38 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
             }
         }
 
-        // Optional: Check file size (e.g., max 5MB)
-        const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+        // Check file size (max 1MB)
+        const maxSize = 1 * 1024 * 1024; // 1MB in bytes
         if (file.size > maxSize) {
-            return 'Ukuran file terlalu besar. Maksimal 5MB.';
+            return 'Ukuran file terlalu besar. Maksimal 1MB.';
         }
 
         return null;
     };
 
+    // Convert file to base64
+    const fileToBase64 = (file: File) =>
+        new Promise<string | ArrayBuffer | null>((resolve, reject) => {
+
+            // check iff file is blob
+            if (!(file instanceof Blob)) {
+                resolve(null);
+                return;
+            }
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
+
+
     // Handle file change
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>, onChange: any) => {
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
 
         if (!file) {
             setFileError('');
-            onChange(null);
+            setValue('uploadedFile', null);
             return;
         }
 
@@ -246,10 +277,32 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
         if (error) {
             setFileError(error);
             event.target.value = ''; // Reset input
-            onChange(null);
+            setValue('uploadedFile', null);
         } else {
-            setFileError('');
-            onChange(file);
+            try {
+                // Convert file to base64
+                const base64String = await fileToBase64(file);
+
+                // Ensure we have a valid string result
+                if (!base64String || typeof base64String !== 'string') {
+                    throw new Error('Failed to convert file to base64');
+                }
+
+                // Store base64 string with file metadata
+                const fileData = {
+                    value: base64String.split('base64,')[1] || base64String,
+                    name: file.name,
+                    size: file.size,
+                    type: file.type
+                };
+
+                setFileError('');
+                setValue('uploadedFile', fileData);
+            } catch (error) {
+                setFileError('Gagal membaca file. Silakan coba lagi.');
+                event.target.value = '';
+                setValue('uploadedFile', null);
+            }
         }
     };
 
@@ -479,11 +532,49 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
                 </div>
             </div>
 
+            {/* Warning when duration is 0 */}
+            {durasiJam === 0 && durasiHari === 0 && (tanggalMulai || tanggalSelesai || jamMulai || jamSelesai) && (
+                <div style={{
+                    padding: '0.75rem 1rem',
+                    backgroundColor: '#fef3c7',
+                    border: '1px solid #fbbf24',
+                    borderRadius: '0.375rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                }}>
+                    <svg
+                        style={{ width: '1.25rem', height: '1.25rem', color: '#f59e0b', flexShrink: 0 }}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
+                    </svg>
+                    <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#92400e', margin: 0 }}>
+                            Peringatan: Durasi izin tidak valid
+                        </p>
+                        <p style={{ fontSize: '0.75rem', color: '#78350f', margin: '0.25rem 0 0 0' }}>
+                            {!pilihJam
+                                ? 'Silakan pilih tanggal mulai dan tanggal selesai yang valid. Tanggal selesai harus sama atau setelah tanggal mulai.'
+                                : 'Silakan pilih jam mulai dan jam selesai yang valid. Jam selesai harus setelah jam mulai.'}
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* File Upload */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>
-                    Upload Dokumen Pendukung <span style={{ color: '#ef4444' }}>*</span>
+            <div className="flex flex-col">
+                <label className="mr-1 font-medium after:content-['*'] after:text-red-400 after:text-sm">
+                    Upload Dokumen Pendukung
                 </label>
+                <span className="text-sm text-gray-600 my-2">Max File size 1 MB</span>
                 <Controller
                     name="uploadedFile"
                     control={control}
@@ -491,57 +582,108 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
                         required: 'File dokumen wajib diupload',
                         validate: (value) => {
                             if (!value) return 'File dokumen wajib diupload';
-                            if (value instanceof File) {
-                                const error = validateFile(value);
-                                return error || true;
+                            // Check if it's our file data object with base64
+                            if (value && typeof value === 'object' && 'base64' in value && 'name' in value) {
+                                return true;
                             }
-                            return true;
+                            return 'File tidak valid';
                         }
                     }}
-                    render={({ field: { onChange, value, ...field }, fieldState }) => (
-                        <div>
-                            <div style={{
-                                position: 'relative',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.5rem'
-                            }}>
+                    render={({ fieldState }) => (
+                        <div className="flex flex-col w-full gap-4">
+                            <div
+                                className="alurkerja-form w-full flex flex-col justify-center items-center cursor-pointer rounded border-2 border-gray-200 border-dashed"
+                                onClick={() => document.getElementById('file-upload-input')?.click()}
+                            >
                                 <input
+                                    id="file-upload-input"
                                     type="file"
-                                    accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.doc,.docx,application/pdf,image/*,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                                    onChange={(e) => handleFileChange(e, onChange)}
-                                    style={{
-                                        fontSize: '0.875rem',
-                                        width: '100%',
-                                        padding: '0.5rem 0.75rem',
-                                        border: '1px solid #d1d5db',
-                                        borderRadius: '0.375rem',
-                                        outline: 'none',
-                                        cursor: 'pointer'
-                                    }}
-                                    {...field}
+                                    accept="image/jpeg,.jpg,image/png,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.doc,.docx"
+                                    onChange={handleFileChange}
+                                    style={{ display: 'none' }}
+                                    tabIndex={-1}
                                 />
-                                {uploadedFile && (
-                                    <div style={{
-                                        fontSize: '0.75rem',
-                                        color: '#059669',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.5rem'
-                                    }}>
-                                        <span>✓</span>
-                                        <span>File terpilih: {uploadedFile.name}</span>
-                                        <span style={{ color: '#6b7280' }}>
-                                            ({(uploadedFile.size / 1024).toFixed(2)} KB)
-                                        </span>
-                                    </div>
-                                )}
+                                <div className="flex flex-col items-center justify-center gap-2 pt-5 pb-6">
+                                    <svg
+                                        stroke="currentColor"
+                                        fill="currentColor"
+                                        strokeWidth="0"
+                                        viewBox="0 0 512 512"
+                                        height="2em"
+                                        width="2em"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        className="text-gray-400"
+                                    >
+                                        <path d="M296 384h-80c-13.3 0-24-10.7-24-24V192h-87.7c-17.8 0-26.7-21.5-14.1-34.1L242.3 5.7c7.5-7.5 19.8-7.5 27.3 0l152.2 152.2c12.6 12.6 3.7 34.1-14.1 34.1H320v168c0 13.3-10.7 24-24 24zm216-8v112c0 13.3-10.7 24-24 24H24c-13.3 0-24-10.7-24-24V376c0-13.3 10.7-24 24-24h136v8c0 30.9 25.1 56 56 56h80c30.9 0 56-25.1 56-56v-8h136c13.3 0 24 10.7 24 24zm-124 88c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20zm64 0c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20z"></path>
+                                    </svg>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                        <span className="font-semibold">Klik untuk mengunggah, atau drag file</span>
+                                    </p>
+                                </div>
                             </div>
-                            <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
-                                Format yang diperbolehkan: PDF, gambar (JPG, PNG, GIF, WEBP), dan dokumen Word (DOC, DOCX). Maksimal 5MB.
-                            </p>
+
+                            {uploadedFile && typeof uploadedFile === 'object' && 'name' in uploadedFile && (
+                                <div className="text-gray-600 border-2 border-b-0 border-gray-200 rounded">
+                                    <div className="flex items-center justify-between p-2 border-b-2">
+                                        <div className="flex items-center gap-x-2">
+                                            <svg
+                                                stroke="currentColor"
+                                                fill="currentColor"
+                                                strokeWidth="0"
+                                                viewBox="0 0 384 512"
+                                                height="1em"
+                                                width="1em"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                            >
+                                                <path d="M384 121.941V128H256V0h6.059a24 24 0 0 1 16.97 7.029l97.941 97.941a24.002 24.002 0 0 1 7.03 16.971zM248 160c-13.2 0-24-10.8-24-24V0H24C10.745 0 0 10.745 0 24v464c0 13.255 10.745 24 24 24h336c13.255 0 24-10.745 24-24V160H248zm-135.455 16c26.51 0 48 21.49 48 48s-21.49 48-48 48-48-21.49-48-48 21.491-48 48-48zm208 240h-256l.485-48.485L104.545 328c4.686-4.686 11.799-4.201 16.485.485L160.545 368 264.06 264.485c4.686-4.686 12.284-4.686 16.971 0L320.545 304v112z"></path>
+                                            </svg>
+                                            <span>{uploadedFile.name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-x-2">
+                                            <span>{(uploadedFile.size / 1024).toFixed(2)} KB</span>
+                                            <div className="cursor-pointer">
+                                                <svg
+                                                    stroke="currentColor"
+                                                    fill="currentColor"
+                                                    strokeWidth="0"
+                                                    viewBox="0 0 24 24"
+                                                    height="1em"
+                                                    width="1em"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                >
+                                                    <path fill="none" d="M0 0h24v24H0z"></path>
+                                                    <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"></path>
+                                                </svg>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setValue('uploadedFile', null);
+                                                    setFileError('');
+                                                    const fileInput = document.getElementById('file-upload-input') as HTMLInputElement;
+                                                    if (fileInput) fileInput.value = '';
+                                                }}
+                                            >
+                                                <svg
+                                                    stroke="currentColor"
+                                                    fill="currentColor"
+                                                    strokeWidth="0"
+                                                    viewBox="0 0 448 512"
+                                                    height="1em"
+                                                    width="1em"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                >
+                                                    <path d="M432 32H312l-9.4-18.7A24 24 0 0 0 281.1 0H166.8a23.72 23.72 0 0 0-21.4 13.3L136 32H16A16 16 0 0 0 0 48v32a16 16 0 0 0 16 16h416a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16zM53.2 467a48 48 0 0 0 47.9 45h245.8a48 48 0 0 0 47.9-45L416 128H32z"></path>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {(fieldState.error || fileError) && (
-                                <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem' }}>
+                                <p className="text-xs text-red-500 mt-2">
                                     {fieldState.error?.message || fileError}
                                 </p>
                             )}

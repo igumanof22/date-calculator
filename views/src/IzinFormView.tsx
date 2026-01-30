@@ -12,6 +12,8 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
     const pilihJam = watch('pilihJam') || false;
     const jamMulai = watch('jamMulai');
     const jamSelesai = watch('jamSelesai');
+    const durasiJam = watch('durasiJam') || 0;
+    const durasiHari = watch('durasiHari') || 0;
 
     // Calculate minimum date allowed
     const getMinDate = () => {
@@ -165,6 +167,11 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
                 const [startHour, startMin] = jamMulai.split(':').map(Number);
                 const [endHour, endMin] = jamSelesai.split(':').map(Number);
 
+                let breakTime = 1;
+                if (startHour > 12) {
+                    breakTime = 0;
+                }
+
                 start.setHours(startHour, startMin, 0, 0);
                 end.setHours(endHour, endMin, 0, 0);
 
@@ -172,7 +179,7 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
                 let diffHours = diffTime / (1000 * 60 * 60); // Convert to hours
 
                 // Subtract 1 hour for lunch break (istirahat)
-                diffHours = Math.max(0, diffHours - 1);
+                diffHours = Math.max(0, diffHours - breakTime);
 
                 setValue('durasiJam', Math.round(diffHours * 10) / 10); // Round to 1 decimal
                 setValue('durasiHari', 0);
@@ -421,6 +428,43 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
                     />
                 </div>
             </div>
+
+            {/* Warning when duration is 0 */}
+            {durasiJam === 0 && durasiHari === 0 && (tanggalMulai || tanggalSelesai || jamMulai || jamSelesai) && (
+                <div style={{
+                    padding: '0.75rem 1rem',
+                    backgroundColor: '#fef3c7',
+                    border: '1px solid #fbbf24',
+                    borderRadius: '0.375rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                }}>
+                    <svg
+                        style={{ width: '1.25rem', height: '1.25rem', color: '#f59e0b', flexShrink: 0 }}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        />
+                    </svg>
+                    <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#92400e', margin: 0 }}>
+                            Peringatan: Durasi izin tidak valid
+                        </p>
+                        <p style={{ fontSize: '0.75rem', color: '#78350f', margin: '0.25rem 0 0 0' }}>
+                            {!pilihJam
+                                ? 'Silakan pilih tanggal mulai dan tanggal selesai yang valid. Tanggal selesai harus sama atau setelah tanggal mulai.'
+                                : 'Silakan pilih jam mulai dan jam selesai yang valid. Jam selesai harus setelah jam mulai.'}
+                        </p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

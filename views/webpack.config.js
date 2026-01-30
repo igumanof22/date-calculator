@@ -43,6 +43,7 @@ module.exports = {
         './getData_view': './src/GetDataView.tsx',
         './postData_view': './src/PostDataView.tsx',
         './izin_form_view': './src/IzinFormView.tsx',
+        './izin_with_file_form_view': './src/IzinWithFileFormView.tsx',
       },
       shared: {
         react: { singleton: true, },

@@ -7,6 +7,7 @@ import PostDataView from './PostDataView';
 import DetailView from './DetailView';
 import EditView from './EditView';
 import IzinFormView from './IzinFormView';
+import IzinWithFileFormView from './IzinWithFileFormView';
 import DebugView from './debug/DebugView';
 import { useForm } from 'react-hook-form';
 import ExampleForm from './debug/ExampleForm';
@@ -88,6 +89,7 @@ const App: React.FC = () => {
               <Route path="/detail" element={<DetailView form={form} alurkerjaParams={alurkejraProps}  />} />
               <Route path="/edit" element={<EditView  form={form} alurkerjaParams={alurkejraProps}  />} />
               <Route path="/izin-form" element={<IzinFormView props={{ form, item: {} }} alurkerjaParams={alurkejraProps} />} />
+              <Route path="/izin-form-with-file" element={<IzinWithFileFormView props={{ form, item: {} }} alurkerjaParams={alurkejraProps} />} />
               <Route path="/debug" element={<ExampleForm />} />
             </Routes>
             </div>

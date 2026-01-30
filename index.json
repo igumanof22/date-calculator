@@ -1,0 +1,24 @@
+{
+    "name": "Date Calculator",
+    "addon_key": "date-calculator",
+    "addon_tags" :["form"],
+    "version": "1.0.0",
+    "description": "An addon that provides date calculation functionalities including adding or subtracting days, weeks, months, or years from a given date.",
+    "author": "MIG-II",
+    "license": "MIT",
+    "type": "REST",
+    "view_type": "MFE",
+    "view_path": "views/dist",
+    "component_scope": "date_calculator",
+    "forms": {
+        "izin_form": {
+            "name": "Date Calculator Form",
+            "description": "Form untuk pengajuan izin dengan perhitungan durasi otomatis berdasarkan tanggal dan jam"
+        }
+    },
+    "custom_views": {
+        "FORMS": {
+            "izin_form": "izin_form_view"
+        }
+    }
+}

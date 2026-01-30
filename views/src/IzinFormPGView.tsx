@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Controller } from 'react-hook-form';
 import { Input } from 'alurkerja-ui';
 import { AlurkerjaMfeInputProps } from './type/AlurkerjaType';
 
-export default function IzinWithFileFormView({ props, alurkerjaParams }: AlurkerjaMfeInputProps) {
+export default function IzinFormPGView({ props, alurkerjaParams }: AlurkerjaMfeInputProps) {
     const { control, watch, setValue } = props.form;
-    const [fileError, setFileError] = useState<string>('');
 
     // Watch values for calculations
     const tanggalMulai = watch('tanggalMulai');
@@ -13,92 +12,26 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
     const pilihJam = watch('pilihJam') || false;
     const jamMulai = watch('jamMulai');
     const jamSelesai = watch('jamSelesai');
-    const uploadedFile = watch('uploadedFile');
     const durasiJam = watch('durasiJam') || 0;
     const durasiHari = watch('durasiHari') || 0;
 
-    // Calculate minimum date allowed
-    const getMinDate = () => {
-        const now = new Date();
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-
-        // If current time is after 16:30, start from tomorrow
-        if (currentHour >= 17 || (currentHour === 16 && currentMinute >= 30)) {
-            const tomorrow = new Date(now);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            return tomorrow.toISOString().split('T')[0];
-        }
-
-        // Otherwise, start from today
-        return now.toISOString().split('T')[0];
-    };
-
-    const minDate = getMinDate();
-
     // Generate time options (08:00 - 17:00, every 30 minutes)
-    // useMemo to recalculate when tanggalMulai changes
     const jamMulaiOptions = useMemo(() => {
-        const generateTimeOptions = () => {
-            const times: string[] = [];
-            let currentHour: number;
-            let currentMinute: number;
+        const times: string[] = [];
+        let currentHour = 8;
+        let currentMinute = 0;
 
-            // Check if selected date is today
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-            let isToday = false;
-            if (tanggalMulai) {
-                const selectedDate = new Date(tanggalMulai);
-                // Compare only year, month, and day
-                isToday = selectedDate.getFullYear() === today.getFullYear() &&
-                         selectedDate.getMonth() === today.getMonth() &&
-                         selectedDate.getDate() === today.getDate();
-            }
-
-            if (isToday) {
-                // Start from current time rounded to next 30-minute interval
-                const nowHour = now.getHours();
-                const nowMinute = now.getMinutes();
-
-                // Round up to next 30-minute interval
-                if (nowMinute <= 30) {
-                    currentHour = nowHour;
-                    currentMinute = 30;
-                } else {
-                    currentHour = nowHour + 1;
-                    currentMinute = 0;
-                }
-
-                // If current time is after 17:00 or before 08:00, start from 08:00
-                if (currentHour < 8 || currentHour > 17) {
-                    currentHour = 8;
-                    currentMinute = 0;
-                }
-            } else {
-                // For other dates (past or future), start from 08:00
-                currentHour = 8;
+        while (currentHour <= 17) {
+            if (currentHour === 17 && currentMinute > 0) break;
+            times.push(`${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`);
+            currentMinute += 30;
+            if (currentMinute >= 60) {
                 currentMinute = 0;
+                currentHour += 1;
             }
-
-            while (currentHour <= 17) {
-                if (currentHour === 17 && currentMinute > 0) break;
-                if (currentHour === 12) {
-                    currentHour += 1;
-                    continue;
-                }
-                times.push(`${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`);
-                currentMinute += 30;
-                if (currentMinute >= 60) {
-                    currentMinute = 0;
-                    currentHour += 1;
-                }
-            }
-            return times;
-        };
-        return generateTimeOptions();
-    }, [tanggalMulai]); // Re-calculate when tanggalMulai changes
+        }
+        return times;
+    }, []);
 
     // Generate jam selesai options based on jam mulai
     const jamSelesaiOptions = useMemo(() => {
@@ -117,10 +50,6 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
 
         while (currentHour <= 17) {
             if (currentHour === 17 && currentMinute > 0) break;
-            if (currentHour === 12) {
-                currentHour += 1;
-                continue;
-            }
             times.push(`${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`);
             currentMinute += 30;
             if (currentMinute >= 60) {
@@ -129,15 +58,7 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
             }
         }
         return times;
-    }, [jamMulai]); // Re-calculate when jamMulai changes
-
-    // Reset jamMulai if current selection is not available in new options
-    useEffect(() => {
-        if (pilihJam && jamMulai && !jamMulaiOptions.includes(jamMulai)) {
-            setValue('jamMulai', '');
-            setValue('jamSelesai', '');
-        }
-    }, [tanggalMulai, jamMulaiOptions, jamMulai, pilihJam, setValue]);
+    }, [jamMulai]);
 
     // Reset jamSelesai if current selection is not available in new options
     useEffect(() => {
@@ -213,99 +134,6 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
         }
     }, [pilihJam, tanggalMulai, setValue]);
 
-    // File validation function
-    const validateFile = (file: File): string | null => {
-        // Allowed file types
-        const allowedTypes = [
-            'application/pdf',
-            'image/jpeg',
-            'image/jpg',
-            'image/png',
-            'image/gif',
-            'image/webp',
-            'application/msword', // .doc
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // .docx
-        ];
-
-        const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp', '.doc', '.docx'];
-
-        // Check file type
-        if (!allowedTypes.includes(file.type)) {
-            // Check by extension if MIME type check fails
-            const fileExtension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-            if (!allowedExtensions.includes(fileExtension)) {
-                return 'Tipe file tidak valid. Hanya file PDF, gambar (JPG, PNG, GIF, WEBP), dan dokumen Word (DOC, DOCX) yang diperbolehkan.';
-            }
-        }
-
-        // Check file size (max 1MB)
-        const maxSize = 1 * 1024 * 1024; // 1MB in bytes
-        if (file.size > maxSize) {
-            return 'Ukuran file terlalu besar. Maksimal 1MB.';
-        }
-
-        return null;
-    };
-
-    // Convert file to base64
-    const fileToBase64 = (file: File) =>
-        new Promise<string | ArrayBuffer | null>((resolve, reject) => {
-
-            // check iff file is blob
-            if (!(file instanceof Blob)) {
-                resolve(null);
-                return;
-            }
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
-
-
-    // Handle file change
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-
-        if (!file) {
-            setFileError('');
-            setValue('uploadedFile', null);
-            return;
-        }
-
-        const error = validateFile(file);
-        if (error) {
-            setFileError(error);
-            event.target.value = ''; // Reset input
-            setValue('uploadedFile', null);
-        } else {
-            try {
-                // Convert file to base64
-                const base64String = await fileToBase64(file);
-
-                // Ensure we have a valid string result
-                if (!base64String || typeof base64String !== 'string') {
-                    throw new Error('Failed to convert file to base64');
-                }
-
-                // Store base64 string with file metadata
-                const fileData = {
-                    value: base64String.split('base64,')[1] || base64String,
-                    name: file.name,
-                    size: file.size,
-                    type: file.type
-                };
-
-                setFileError('');
-                setValue('uploadedFile', fileData);
-            } catch (error) {
-                setFileError('Gagal membaca file. Silakan coba lagi.');
-                event.target.value = '';
-                setValue('uploadedFile', null);
-            }
-        }
-    };
-
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* Tanggal Mulai dan Selesai */}
@@ -323,7 +151,6 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
                                 <Input
                                     type="date"
                                     style={{ fontSize: '0.875rem', width: '100%' }}
-                                    min={minDate}
                                     {...field}
                                 />
                                 {fieldState.error && (
@@ -349,7 +176,7 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
                                     <Input
                                         type="date"
                                         style={{ fontSize: '0.875rem', width: '100%' }}
-                                        min={tanggalMulai || minDate}
+                                        min={tanggalMulai}
                                         {...field}
                                     />
                                     {fieldState.error && (
@@ -422,7 +249,6 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
                             render={({ field, fieldState }) => (
                                 <div>
                                     <select
-                                        key={`jam-mulai-${jamMulaiOptions.length}-${jamMulaiOptions[0] || 'empty'}`}
                                         style={{
                                             fontSize: '0.875rem',
                                             width: '100%',
@@ -459,7 +285,6 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
                             render={({ field, fieldState }) => (
                                 <div>
                                     <select
-                                        key={`jam-selesai-${jamSelesaiOptions.length}-${jamSelesaiOptions[0] || 'empty'}`}
                                         style={{
                                             fontSize: '0.875rem',
                                             width: '100%',
@@ -568,129 +393,6 @@ export default function IzinWithFileFormView({ props, alurkerjaParams }: Alurker
                     </div>
                 </div>
             )}
-
-            {/* File Upload */}
-            <div className="flex flex-col">
-                <label className="mr-1 font-medium after:content-['*'] after:text-red-400 after:text-sm">
-                    Upload Dokumen Pendukung
-                </label>
-                <span className="text-sm text-gray-600 my-2">Max File size 1 MB</span>
-                <Controller
-                    name="uploadedFile"
-                    control={control}
-                    rules={{
-                        required: 'File dokumen wajib diupload',
-                        validate: (value) => {
-                            if (!value) return 'File dokumen wajib diupload';
-                            // Check if it's our file data object with base64
-                            if (value && typeof value === 'object' && 'base64' in value && 'name' in value) {
-                                return true;
-                            }
-                            return 'File tidak valid';
-                        }
-                    }}
-                    render={({ fieldState }) => (
-                        <div className="flex flex-col w-full gap-4">
-                            <div
-                                className="alurkerja-form w-full flex flex-col justify-center items-center cursor-pointer rounded border-2 border-gray-200 border-dashed"
-                                onClick={() => document.getElementById('file-upload-input')?.click()}
-                            >
-                                <input
-                                    id="file-upload-input"
-                                    type="file"
-                                    accept="image/jpeg,.jpg,image/png,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.doc,.docx"
-                                    onChange={handleFileChange}
-                                    style={{ display: 'none' }}
-                                    tabIndex={-1}
-                                />
-                                <div className="flex flex-col items-center justify-center gap-2 pt-5 pb-6">
-                                    <svg
-                                        stroke="currentColor"
-                                        fill="currentColor"
-                                        strokeWidth="0"
-                                        viewBox="0 0 512 512"
-                                        height="2em"
-                                        width="2em"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="text-gray-400"
-                                    >
-                                        <path d="M296 384h-80c-13.3 0-24-10.7-24-24V192h-87.7c-17.8 0-26.7-21.5-14.1-34.1L242.3 5.7c7.5-7.5 19.8-7.5 27.3 0l152.2 152.2c12.6 12.6 3.7 34.1-14.1 34.1H320v168c0 13.3-10.7 24-24 24zm216-8v112c0 13.3-10.7 24-24 24H24c-13.3 0-24-10.7-24-24V376c0-13.3 10.7-24 24-24h136v8c0 30.9 25.1 56 56 56h80c30.9 0 56-25.1 56-56v-8h136c13.3 0 24 10.7 24 24zm-124 88c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20zm64 0c0-11-9-20-20-20s-20 9-20 20 9 20 20 20 20-9 20-20z"></path>
-                                    </svg>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                                        <span className="font-semibold">Klik untuk mengunggah, atau drag file</span>
-                                    </p>
-                                </div>
-                            </div>
-
-                            {uploadedFile && typeof uploadedFile === 'object' && 'name' in uploadedFile && (
-                                <div className="text-gray-600 border-2 border-b-0 border-gray-200 rounded">
-                                    <div className="flex items-center justify-between p-2 border-b-2">
-                                        <div className="flex items-center gap-x-2">
-                                            <svg
-                                                stroke="currentColor"
-                                                fill="currentColor"
-                                                strokeWidth="0"
-                                                viewBox="0 0 384 512"
-                                                height="1em"
-                                                width="1em"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                            >
-                                                <path d="M384 121.941V128H256V0h6.059a24 24 0 0 1 16.97 7.029l97.941 97.941a24.002 24.002 0 0 1 7.03 16.971zM248 160c-13.2 0-24-10.8-24-24V0H24C10.745 0 0 10.745 0 24v464c0 13.255 10.745 24 24 24h336c13.255 0 24-10.745 24-24V160H248zm-135.455 16c26.51 0 48 21.49 48 48s-21.49 48-48 48-48-21.49-48-48 21.491-48 48-48zm208 240h-256l.485-48.485L104.545 328c4.686-4.686 11.799-4.201 16.485.485L160.545 368 264.06 264.485c4.686-4.686 12.284-4.686 16.971 0L320.545 304v112z"></path>
-                                            </svg>
-                                            <span>{uploadedFile.name}</span>
-                                        </div>
-                                        <div className="flex items-center gap-x-2">
-                                            <span>{(uploadedFile.size / 1024).toFixed(2)} KB</span>
-                                            <div className="cursor-pointer">
-                                                <svg
-                                                    stroke="currentColor"
-                                                    fill="currentColor"
-                                                    strokeWidth="0"
-                                                    viewBox="0 0 24 24"
-                                                    height="1em"
-                                                    width="1em"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                >
-                                                    <path fill="none" d="M0 0h24v24H0z"></path>
-                                                    <path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"></path>
-                                                </svg>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setValue('uploadedFile', null);
-                                                    setFileError('');
-                                                    const fileInput = document.getElementById('file-upload-input') as HTMLInputElement;
-                                                    if (fileInput) fileInput.value = '';
-                                                }}
-                                            >
-                                                <svg
-                                                    stroke="currentColor"
-                                                    fill="currentColor"
-                                                    strokeWidth="0"
-                                                    viewBox="0 0 448 512"
-                                                    height="1em"
-                                                    width="1em"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                >
-                                                    <path d="M432 32H312l-9.4-18.7A24 24 0 0 0 281.1 0H166.8a23.72 23.72 0 0 0-21.4 13.3L136 32H16A16 16 0 0 0 0 48v32a16 16 0 0 0 16 16h416a16 16 0 0 0 16-16V48a16 16 0 0 0-16-16zM53.2 467a48 48 0 0 0 47.9 45h245.8a48 48 0 0 0 47.9-45L416 128H32z"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {(fieldState.error || fileError) && (
-                                <p className="text-xs text-red-500 mt-2">
-                                    {fieldState.error?.message || fileError}
-                                </p>
-                            )}
-                        </div>
-                    )}
-                />
-            </div>
         </div>
     );
 }

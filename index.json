@@ -14,11 +14,16 @@
         "izin_form": {
             "name": "Date Calculator Form",
             "description": "Form untuk pengajuan izin dengan perhitungan durasi otomatis berdasarkan tanggal dan jam"
+        },
+        "izin_form_pg": {
+            "name": "Date Calculator Form PG",
+            "description": "Form untuk pengajuan izin PG tanpa batasan tanggal dan jam, dapat memilih tanggal dan jam kapanpun"
         }
     },
     "custom_views": {
         "FORMS": {
-            "izin_form": "izin_form_view"
+            "izin_form": "izin_form_view",
+            "izin_form_pg": "izin_form_pg_view"
         }
     }
 }

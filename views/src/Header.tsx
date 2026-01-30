@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, Plus, List, Edit, Eye, PenTool, Calendar, FileText } from 'lucide-react';
+import { Home, Plus, List, Edit, Eye, PenTool, Calendar, FileText, Clock } from 'lucide-react';
 
 interface HeaderProps {
   title?: string;
@@ -16,6 +16,7 @@ const Header: React.FC<HeaderProps> = ({ title = "MockAPI Dashboard" }) => {
     { path: '/detail', label: 'Detail', icon: Eye },
     { path: '/izin-form', label: 'Form Izin', icon: Calendar },
     { path: '/izin-form-with-file', label: 'Form Izin + File', icon: FileText },
+    { path: '/izin-form-pg', label: 'Form Izin PG', icon: Clock },
   ];
 
   return (

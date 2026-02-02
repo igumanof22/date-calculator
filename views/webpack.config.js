@@ -45,6 +45,7 @@ module.exports = {
         './izin_form_view': './src/IzinFormView.tsx',
         './izin_with_file_form_view': './src/IzinWithFileFormView.tsx',
         './izin_form_pg_view': './src/IzinFormPGView.tsx',
+        './izin_form_ganti': './src/IzinFormGanti.tsx',
       },
       shared: {
         react: { singleton: true, },

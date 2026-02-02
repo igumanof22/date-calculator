@@ -9,6 +9,7 @@ import EditView from './EditView';
 import IzinFormView from './IzinFormView';
 import IzinWithFileFormView from './IzinWithFileFormView';
 import IzinFormPGView from './IzinFormPGView';
+import IzinFormGanti from './IzinFormGanti';
 import DebugView from './debug/DebugView';
 import { useForm } from 'react-hook-form';
 import ExampleForm from './debug/ExampleForm';
@@ -92,6 +93,7 @@ const App: React.FC = () => {
               <Route path="/izin-form" element={<IzinFormView props={{ form, item: {} }} alurkerjaParams={alurkejraProps} />} />
               <Route path="/izin-form-with-file" element={<IzinWithFileFormView props={{ form, item: {} }} alurkerjaParams={alurkejraProps} />} />
               <Route path="/izin-form-pg" element={<IzinFormPGView props={{ form, item: {} }} alurkerjaParams={alurkejraProps} />} />
+              <Route path="/izin-form-ganti" element={<IzinFormGanti props={{ form, item: {} }} alurkerjaParams={alurkejraProps} />} />
               <Route path="/debug" element={<ExampleForm />} />
             </Routes>
             </div>

@@ -10,6 +10,8 @@ export { default as DetailView } from './DetailView';
 export { default as GetDataView } from './GetDataView';
 export { default as PostDataView } from './PostDataView';
 export { default as IzinFormView } from './IzinFormView';
+export { default as IzinFormPGView } from './IzinFormPGView';
+export { default as IzinFormGanti } from './IzinFormGanti';
 
 const container = document.getElementById('root');
 if (container) {

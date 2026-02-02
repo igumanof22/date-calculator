@@ -2,7 +2,7 @@
     "name": "Date Calculator",
     "addon_key": "date-calculator",
     "addon_tags" :["form"],
-    "version": "1.0.0",
+    "version": "3.0.0",
     "description": "An addon that provides date calculation functionalities including adding or subtracting days, weeks, months, or years from a given date.",
     "author": "MIG-II",
     "license": "MIT",
@@ -18,12 +18,17 @@
         "izin_form_pg": {
             "name": "Date Calculator Form PG",
             "description": "Form untuk pengajuan izin PG tanpa batasan tanggal dan jam, dapat memilih tanggal dan jam kapanpun"
+        },
+        "izin_form_ganti": {
+            "name": "Date Calculator Form Ganti",
+            "description": "Form untuk pengajuan izin ganti dengan datetime picker tanpa batasan, menampilkan durasi dalam jam saja"
         }
     },
     "custom_views": {
         "FORMS": {
             "izin_form": "izin_form_view",
-            "izin_form_pg": "izin_form_pg_view"
+            "izin_form_pg": "izin_form_pg_view",
+            "izin_form_ganti": "izin_form_ganti"
         }
     }
 }

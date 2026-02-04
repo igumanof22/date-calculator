@@ -34,7 +34,7 @@ export default function IzinFormGanti({ props, alurkerjaParams }: AlurkerjaMfeIn
             {/* Tanggal Mulai dan Selesai */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', marginBottom: '0.25rem' }}>
                         Tanggal Mulai Ganti Jam <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <Controller
@@ -45,7 +45,7 @@ export default function IzinFormGanti({ props, alurkerjaParams }: AlurkerjaMfeIn
                             <div>
                                 <Input
                                     type="datetime-local"
-                                    style={{ fontSize: '0.875rem', width: '100%' }}
+                                    style={{ fontSize: '16px', width: '100%' }}
                                     {...field}
                                 />
                                 {fieldState.error && (
@@ -57,7 +57,7 @@ export default function IzinFormGanti({ props, alurkerjaParams }: AlurkerjaMfeIn
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', marginBottom: '0.25rem' }}>
                         Tanggal Selesai Ganti Jam <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <Controller
@@ -68,7 +68,7 @@ export default function IzinFormGanti({ props, alurkerjaParams }: AlurkerjaMfeIn
                             <div>
                                 <Input
                                     type="datetime-local"
-                                    style={{ fontSize: '0.875rem', width: '100%' }}
+                                    style={{ fontSize: '16px', width: '100%' }}
                                     min={tanggalMulai}
                                     {...field}
                                 />
@@ -83,7 +83,7 @@ export default function IzinFormGanti({ props, alurkerjaParams }: AlurkerjaMfeIn
 
             {/* Durasi Izin (Read-only) - Full Width */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Jumlah Ganti Jam</label>
+                <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', marginBottom: '0.25rem' }}>Jumlah Ganti Jam</label>
                 <Controller
                     name="gantiJam"
                     control={control}
@@ -91,7 +91,7 @@ export default function IzinFormGanti({ props, alurkerjaParams }: AlurkerjaMfeIn
                         <div>
                             <Input
                                 type="number"
-                                style={{ fontSize: '0.875rem', width: '100%', backgroundColor: '#f9fafb' }}
+                                style={{ fontSize: '16px', width: '100%', backgroundColor: '#f9fafb' }}
                                 disabled
                                 {...field}
                                 value={field.value || 0}
@@ -126,8 +126,8 @@ export default function IzinFormGanti({ props, alurkerjaParams }: AlurkerjaMfeIn
                         />
                     </svg>
                     <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#92400e', margin: 0 }}>
-                            Peringatan: Durasi izin tidak valid
+                        <p style={{ fontSize: '0.75rem', fontWeight: '500', color: '#92400e', margin: 0 }}>
+                            ⚠️ Tidak dapat melakukan ganti jam
                         </p>
                         <p style={{ fontSize: '0.75rem', color: '#78350f', margin: '0.25rem 0 0 0' }}>
                             Silakan pilih tanggal dan waktu mulai serta tanggal dan waktu selesai yang valid. Tanggal selesai harus setelah tanggal mulai.

@@ -6,10 +6,46 @@ import { AlurkerjaMfeInputProps } from './type/AlurkerjaType';
 export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInputProps) {
     const { control, watch, setValue } = props.form;
 
+    // Helper function to format date to dd-MM-yyyy
+    const formatDateToDDMMYYYY = (date: Date | string): string => {
+        const d = typeof date === 'string' ? parseDateFromDDMMYYYY(date) : date;
+        if (!d || isNaN(d.getTime())) return '';
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}-${month}-${year}`;
+    };
+
+    // Helper function to parse dd-MM-yyyy to Date
+    const parseDateFromDDMMYYYY = (dateStr: string): Date | null => {
+        if (!dateStr) return null;
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return null;
+        const day = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const year = parseInt(parts[2], 10);
+        return new Date(year, month, day);
+    };
+
+    // Helper function to convert yyyy-MM-dd to dd-MM-yyyy
+    const convertYYYYMMDDToDDMMYYYY = (dateStr: string): string => {
+        if (!dateStr) return '';
+        const [year, month, day] = dateStr.split('-');
+        return `${day}-${month}-${year}`;
+    };
+
+    // Helper function to convert dd-MM-yyyy to yyyy-MM-dd for input[type="date"]
+    const convertDDMMYYYYToYYYYMMDD = (dateStr: string): string => {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return '';
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    };
+
     // Watch values for calculations
     const tanggalMulai = watch('tanggalMulai');
     const tanggalSelesai = watch('tanggalSelesai');
-    const pilihJam = watch('pilihJam') || false;
+    const customHours = watch('customHours') || false;
     const jamMulai = watch('jamMulai');
     const jamSelesai = watch('jamSelesai');
     const durasiJam = watch('durasiJam') || 0;
@@ -48,11 +84,13 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
 
             let isToday = false;
             if (tanggalMulai) {
-                const selectedDate = new Date(tanggalMulai);
-                // Compare only year, month, and day
-                isToday = selectedDate.getFullYear() === today.getFullYear() &&
-                         selectedDate.getMonth() === today.getMonth() &&
-                         selectedDate.getDate() === today.getDate();
+                const selectedDate = parseDateFromDDMMYYYY(tanggalMulai);
+                if (selectedDate) {
+                    // Compare only year, month, and day
+                    isToday = selectedDate.getFullYear() === today.getFullYear() &&
+                             selectedDate.getMonth() === today.getMonth() &&
+                             selectedDate.getDate() === today.getDate();
+                }
             }
 
             if (isToday) {
@@ -123,76 +161,94 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
 
     // Reset jamMulai if current selection is not available in new options
     useEffect(() => {
-        if (pilihJam && jamMulai && !jamMulaiOptions.includes(jamMulai)) {
+        if (customHours && jamMulai && !jamMulaiOptions.includes(jamMulai)) {
             setValue('jamMulai', '');
             setValue('jamSelesai', '');
         }
-    }, [tanggalMulai, jamMulaiOptions, jamMulai, pilihJam, setValue]);
+    }, [tanggalMulai, jamMulaiOptions, jamMulai, customHours, setValue]);
 
     // Reset jamSelesai if current selection is not available in new options
     useEffect(() => {
-        if (pilihJam && jamSelesai && !jamSelesaiOptions.includes(jamSelesai)) {
+        if (customHours && jamSelesai && !jamSelesaiOptions.includes(jamSelesai)) {
             setValue('jamSelesai', '');
         }
-    }, [jamMulai, jamSelesaiOptions, jamSelesai, pilihJam, setValue]);
+    }, [jamMulai, jamSelesaiOptions, jamSelesai, customHours, setValue]);
 
     // Calculate duration
     useEffect(() => {
-        if (!pilihJam) {
+        if (!customHours) {
+            setValue('pilihJam', 'Tidak')
             // Calculate based on dates
             if (tanggalMulai && tanggalSelesai) {
-                const start = new Date(tanggalMulai);
-                const end = new Date(tanggalSelesai);
+                const start = parseDateFromDDMMYYYY(tanggalMulai);
+                const end = parseDateFromDDMMYYYY(tanggalSelesai);
 
-                // Set time to start of day for accurate day calculation
-                start.setHours(0, 0, 0, 0);
-                end.setHours(0, 0, 0, 0);
+                if (start && end) {
+                    // Set time to start of day for accurate day calculation
+                    start.setHours(0, 0, 0, 0);
+                    end.setHours(0, 0, 0, 0);
 
-                const diffTime = Math.abs(end.getTime() - start.getTime());
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end date
-                const diffHours = diffDays * 8; // Assuming 8 working hours per day
+                    const diffTime = Math.abs(end.getTime() - start.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end date
+                    const diffHours = diffDays * 8; // Assuming 8 working hours per day
 
-                setValue('durasiJam', diffHours);
-                setValue('durasiHari', diffDays);
+                    setValue('durasiJam', diffHours);
+                    setValue('durasiHari', diffDays);
+                } else {
+                    setValue('durasiJam', 0);
+                    setValue('durasiHari', 0);
+                }
             } else {
                 setValue('durasiJam', 0);
                 setValue('durasiHari', 0);
             }
         } else {
+            setValue('pilihJam', 'Ya')
             // Calculate based on time
             if (jamMulai && jamSelesai && tanggalMulai && tanggalSelesai) {
-                const start = new Date(tanggalMulai);
-                const end = new Date(tanggalSelesai);
+                const start = parseDateFromDDMMYYYY(tanggalMulai);
+                const end = parseDateFromDDMMYYYY(tanggalSelesai);
 
-                const [startHour, startMin] = jamMulai.split(':').map(Number);
-                const [endHour, endMin] = jamSelesai.split(':').map(Number);
+                if (start && end) {
+                    const [startHour, startMin] = jamMulai.split(':').map(Number);
+                    const [endHour, endMin] = jamSelesai.split(':').map(Number);
 
-                let breakTime = 1;
-                if (startHour > 12) {
-                    breakTime = 0;
+                    let breakTime = 1;
+                    if (startHour > 12 || endHour <= 12) {
+                        breakTime = 0;
+                    }
+                    if (startHour === 12 && startMin === 30) {
+                        breakTime = 0.5;
+                    }
+                    if (endHour === 12 && endMin === 30) {
+                        breakTime = 0.5;
+                    }
+
+                    start.setHours(startHour, startMin, 0, 0);
+                    end.setHours(endHour, endMin, 0, 0);
+
+                    const diffTime = Math.abs(end.getTime() - start.getTime());
+                    let diffHours = diffTime / (1000 * 60 * 60); // Convert to hours
+
+                    // Subtract 1 hour for lunch break (istirahat)
+                    diffHours = Math.max(0, diffHours - breakTime);
+
+                    setValue('durasiJam', Math.round(diffHours * 10) / 10); // Round to 1 decimal
+                    setValue('durasiHari', 0);
+                } else {
+                    setValue('durasiJam', 0);
+                    setValue('durasiHari', 0);
                 }
-
-                start.setHours(startHour, startMin, 0, 0);
-                end.setHours(endHour, endMin, 0, 0);
-
-                const diffTime = Math.abs(end.getTime() - start.getTime());
-                let diffHours = diffTime / (1000 * 60 * 60); // Convert to hours
-
-                // Subtract 1 hour for lunch break (istirahat)
-                diffHours = Math.max(0, diffHours - breakTime);
-
-                setValue('durasiJam', Math.round(diffHours * 10) / 10); // Round to 1 decimal
-                setValue('durasiHari', 0);
             } else {
                 setValue('durasiJam', 0);
                 setValue('durasiHari', 0);
             }
         }
-    }, [tanggalMulai, tanggalSelesai, pilihJam, jamMulai, jamSelesai, setValue]);
+    }, [tanggalMulai, tanggalSelesai, customHours, jamMulai, jamSelesai, setValue]);
 
     // Reset jam fields when switch changes and auto-set tanggalSelesai
     useEffect(() => {
-        if (!pilihJam) {
+        if (!customHours) {
             setValue('jamMulai', '');
             setValue('jamSelesai', '');
         } else {
@@ -201,14 +257,14 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
                 setValue('tanggalSelesai', tanggalMulai);
             }
         }
-    }, [pilihJam, tanggalMulai, setValue]);
+    }, [customHours, tanggalMulai, setValue]);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {/* Tanggal Mulai dan Selesai */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', marginBottom: '0.25rem' }}>
                         Tanggal Mulai Izin <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <Controller
@@ -219,9 +275,14 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
                             <div>
                                 <Input
                                     type="date"
-                                    style={{ fontSize: '0.875rem', width: '100%' }}
+                                    style={{ fontSize: '16px', width: '100%' }}
                                     min={minDate}
-                                    {...field}
+                                    value={convertDDMMYYYYToYYYYMMDD(field.value || '')}
+                                    onChange={(e) => {
+                                        const yyyyMMdd = e.target.value;
+                                        const ddMMyyyy = convertYYYYMMDDToDDMMYYYY(yyyyMMdd);
+                                        field.onChange(ddMMyyyy);
+                                    }}
                                 />
                                 {fieldState.error && (
                                     <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem' }}>{fieldState.error.message}</p>
@@ -232,22 +293,27 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
                 </div>
 
                 {/* Hide Tanggal Selesai when Pilih Jam = Ya */}
-                {!pilihJam && (
+                {!customHours && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                        <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', marginBottom: '0.25rem' }}>
                             Tanggal Selesai Izin <span style={{ color: '#ef4444' }}>*</span>
                         </label>
                         <Controller
                             name="tanggalSelesai"
                             control={control}
-                            rules={{ required: !pilihJam ? 'Tanggal selesai wajib diisi' : false }}
+                            rules={{ required: !customHours ? 'Tanggal selesai wajib diisi' : false }}
                             render={({ field, fieldState }) => (
                                 <div>
                                     <Input
                                         type="date"
-                                        style={{ fontSize: '0.875rem', width: '100%' }}
-                                        min={tanggalMulai || minDate}
-                                        {...field}
+                                        style={{ fontSize: '16px', width: '100%' }}
+                                        min={convertDDMMYYYYToYYYYMMDD(tanggalMulai || '') || minDate}
+                                        value={convertDDMMYYYYToYYYYMMDD(field.value || '')}
+                                        onChange={(e) => {
+                                            const yyyyMMdd = e.target.value;
+                                            const ddMMyyyy = convertYYYYMMDDToDDMMYYYY(yyyyMMdd);
+                                            field.onChange(ddMMyyyy);
+                                        }}
                                     />
                                     {fieldState.error && (
                                         <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem' }}>{fieldState.error.message}</p>
@@ -261,9 +327,9 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
 
             {/* Switch Pilih Jam */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Pilih Jam</label>
+                <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', marginBottom: '0.25rem' }}>Pilih Jam</label>
                 <Controller
-                    name="pilihJam"
+                    name="customHours"
                     control={control}
                     defaultValue={false}
                     render={({ field }) => (
@@ -297,7 +363,7 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
                                     }}
                                 />
                             </button>
-                            <span style={{ fontSize: '0.875rem', color: '#374151' }}>
+                            <span style={{ fontSize: '16px', color: '#374151' }}>
                                 {field.value ? 'Ya' : 'Tidak'}
                             </span>
                         </div>
@@ -305,23 +371,23 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
                 />
             </div>
 
-            {/* Jam Mulai dan Selesai - Only show when pilihJam is true */}
-            {pilihJam && (
+            {/* Jam Mulai dan Selesai - Only show when customHours is true */}
+            {customHours && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                        <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', marginBottom: '0.25rem' }}>
                             Jam Mulai Izin <span style={{ color: '#ef4444' }}>*</span>
                         </label>
                         <Controller
                             name="jamMulai"
                             control={control}
-                            rules={{ required: pilihJam ? 'Jam mulai wajib diisi' : false }}
+                            rules={{ required: customHours ? 'Jam mulai wajib diisi' : false }}
                             render={({ field, fieldState }) => (
                                 <div>
                                     <select
                                         key={`jam-mulai-${jamMulaiOptions.length}-${jamMulaiOptions[0] || 'empty'}`}
                                         style={{
-                                            fontSize: '0.875rem',
+                                            fontSize: '16px',
                                             width: '100%',
                                             padding: '0.5rem 0.75rem',
                                             border: '1px solid #d1d5db',
@@ -346,19 +412,19 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                        <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>
+                        <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', marginBottom: '0.25rem' }}>
                             Jam Selesai Izin <span style={{ color: '#ef4444' }}>*</span>
                         </label>
                         <Controller
                             name="jamSelesai"
                             control={control}
-                            rules={{ required: pilihJam ? 'Jam selesai wajib diisi' : false }}
+                            rules={{ required: customHours ? 'Jam selesai wajib diisi' : false }}
                             render={({ field, fieldState }) => (
                                 <div>
                                     <select
                                         key={`jam-selesai-${jamSelesaiOptions.length}-${jamSelesaiOptions[0] || 'empty'}`}
                                         style={{
-                                            fontSize: '0.875rem',
+                                            fontSize: '16px',
                                             width: '100%',
                                             padding: '0.5rem 0.75rem',
                                             border: '1px solid #d1d5db',
@@ -388,7 +454,7 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
             {/* Durasi Izin (Read-only) */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Durasi Izin (Jam)</label>
+                    <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', marginBottom: '0.25rem' }}>Durasi Izin (Jam)</label>
                     <Controller
                         name="durasiJam"
                         control={control}
@@ -396,12 +462,12 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
                             <div>
                                 <Input
                                     type="number"
-                                    style={{ fontSize: '0.875rem', width: '100%', backgroundColor: '#f9fafb' }}
+                                    style={{ fontSize: '16px', width: '100%', backgroundColor: '#f9fafb' }}
                                     disabled
                                     {...field}
                                     value={field.value || 0}
                                 />
-                                {pilihJam && (
+                                {customHours && (
                                     <p style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>
                                         * Sudah dikurangi 1 jam istirahat
                                     </p>
@@ -412,14 +478,14 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem' }}>Durasi Izin (Hari)</label>
+                    <label style={{ display: 'block', fontSize: '16px', fontWeight: '500', marginBottom: '0.25rem' }}>Durasi Izin (Hari)</label>
                     <Controller
                         name="durasiHari"
                         control={control}
                         render={({ field }) => (
                             <Input
                                 type="number"
-                                style={{ fontSize: '0.875rem', width: '100%', backgroundColor: '#f9fafb' }}
+                                style={{ fontSize: '16px', width: '100%', backgroundColor: '#f9fafb' }}
                                 disabled
                                 {...field}
                                 value={field.value || 0}
@@ -454,11 +520,11 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
                         />
                     </svg>
                     <div style={{ flex: 1 }}>
-                        <p style={{ fontSize: '0.875rem', fontWeight: '500', color: '#92400e', margin: 0 }}>
+                        <p style={{ fontSize: '0.75rem', fontWeight: '500', color: '#92400e', margin: 0 }}>
                             Peringatan: Durasi izin tidak valid
                         </p>
                         <p style={{ fontSize: '0.75rem', color: '#78350f', margin: '0.25rem 0 0 0' }}>
-                            {!pilihJam
+                            {!customHours
                                 ? 'Silakan pilih tanggal mulai dan tanggal selesai yang valid. Tanggal selesai harus sama atau setelah tanggal mulai.'
                                 : 'Silakan pilih jam mulai dan jam selesai yang valid. Jam selesai harus setelah jam mulai.'}
                         </p>
@@ -468,4 +534,5 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
         </div>
     );
 }
+
 

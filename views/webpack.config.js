@@ -52,8 +52,7 @@ module.exports = {
         'react-dom': { singleton: true,  },
         'react-hook-form': { singleton: true },
         leaflet: { singleton: true },
-        'react-leaflet': { singleton: true },  // ⭐ INI PENTING!
-  
+        'react-leaflet': { singleton: true },
       }
     }),
     new HtmlWebpackPlugin({ template: './public/index.html' })

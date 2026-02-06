@@ -1,10 +1,29 @@
 import React, { useEffect, useMemo } from 'react';
 import { Controller } from 'react-hook-form';
-import { Input } from 'alurkerja-ui';
+import { Input, InputDate } from 'alurkerja-ui';
 import { AlurkerjaMfeInputProps } from './type/AlurkerjaType';
+import Holidays from 'date-holidays';
 
 export default function IzinFormPGView({ props, alurkerjaParams }: AlurkerjaMfeInputProps) {
     const { control, watch, setValue } = props.form;
+
+    // Initialize holidays for Indonesia
+    const hd = new Holidays('ID');
+
+    // Helper function to check if a date is weekend or holiday
+    const isWeekendOrHoliday = (date: Date): boolean => {
+        const day = date.getDay();
+        // Check if weekend (0 = Sunday, 6 = Saturday)
+        if (day === 0 || day === 6) {
+            return true;
+        }
+
+        // Check if it's a national holiday in Indonesia
+        const holidays = hd.isHoliday(date);
+        return holidays && holidays.length > 0;
+
+
+    };
 
     // Helper function to parse dd-MM-yyyy to Date
     const parseDateFromDDMMYYYY = (dateStr: string): Date | null => {
@@ -15,21 +34,6 @@ export default function IzinFormPGView({ props, alurkerjaParams }: AlurkerjaMfeI
         const month = Number.parseInt(parts[1], 10) - 1;
         const year = Number.parseInt(parts[2], 10);
         return new Date(year, month, day);
-    };
-
-    // Helper function to convert yyyy-MM-dd to dd-MM-yyyy
-    const convertYYYYMMDDToDDMMYYYY = (dateStr: string): string => {
-        if (!dateStr) return '';
-        const [year, month, day] = dateStr.split('-');
-        return `${day}-${month}-${year}`;
-    };
-
-    // Helper function to convert dd-MM-yyyy to yyyy-MM-dd for input[type="date"]
-    const convertDDMMYYYYToYYYYMMDD = (dateStr: string): string => {
-        if (!dateStr) return '';
-        const parts = dateStr.split('-');
-        if (parts.length !== 3) return '';
-        return `${parts[2]}-${parts[1]}-${parts[0]}`;
     };
 
     // Watch values for calculations
@@ -93,6 +97,27 @@ export default function IzinFormPGView({ props, alurkerjaParams }: AlurkerjaMfeI
         }
     }, [jamMulai, jamSelesaiOptions, jamSelesai, customHours, setValue]);
 
+    // Helper function to count working days (excluding weekends and holidays)
+    const countWorkingDays = (startDate: Date, endDate: Date): number => {
+        let count = 0;
+        const current = new Date(startDate);
+        current.setHours(0, 0, 0, 0);
+
+        const end = new Date(endDate);
+        end.setHours(0, 0, 0, 0);
+
+        while (current <= end) {
+            // Check if current date is NOT weekend and NOT holiday
+            if (!isWeekendOrHoliday(current)) {
+                count++;
+            }
+            // Move to next day
+            current.setDate(current.getDate() + 1);
+        }
+
+        return count;
+    };
+
     // Calculate duration
     useEffect(() => {
         if (!customHours) {
@@ -103,16 +128,12 @@ export default function IzinFormPGView({ props, alurkerjaParams }: AlurkerjaMfeI
                 const end = parseDateFromDDMMYYYY(tanggalSelesai);
 
                 if (start && end) {
-                    // Set time to start of day for accurate day calculation
-                    start.setHours(0, 0, 0, 0);
-                    end.setHours(0, 0, 0, 0);
+                    // Count only working days (excluding weekends and holidays)
+                    const workingDays = countWorkingDays(start, end);
+                    const workingHours = workingDays * 8; // Assuming 8 working hours per day
 
-                    const diffTime = Math.abs(end.getTime() - start.getTime());
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end date
-                    const diffHours = diffDays * 8; // Assuming 8 working hours per day
-
-                    setValue('durasiJam', diffHours);
-                    setValue('durasiHari', diffDays);
+                    setValue('durasiJam', workingHours);
+                    setValue('durasiHari', workingDays);
                 } else {
                     setValue('durasiJam', 0);
                     setValue('durasiHari', 0);
@@ -149,7 +170,7 @@ export default function IzinFormPGView({ props, alurkerjaParams }: AlurkerjaMfeI
                     const diffTime = Math.abs(end.getTime() - start.getTime());
                     let diffHours = diffTime / (1000 * 60 * 60); // Convert to hours
 
-                    // Subtract 1 hour for lunch break (istirahat)
+                    // Subtract lunch break time (istirahat)
                     diffHours = Math.max(0, diffHours - breakTime);
                     diffHours = Math.round(diffHours * 10) / 10;
                     let diffDays = Math.round((diffHours / 8) * 100) / 100;
@@ -194,15 +215,19 @@ export default function IzinFormPGView({ props, alurkerjaParams }: AlurkerjaMfeI
                         rules={{ required: 'Tanggal mulai wajib diisi' }}
                         render={({ field, fieldState }) => (
                             <div>
-                                <Input
-                                    type="date"
-                                    style={{ fontSize: '16px', width: '100%' }}
-                                    value={convertDDMMYYYYToYYYYMMDD(field.value || '')}
-                                    onChange={(e) => {
-                                        const yyyyMMdd = e.target.value;
-                                        const ddMMyyyy = convertYYYYMMDDToDDMMYYYY(yyyyMMdd);
-                                        field.onChange(ddMMyyyy);
+                                <InputDate
+                                    selected={field.value ? parseDateFromDDMMYYYY(field.value) : null}
+                                    onChange={(date: Date | null | undefined) => {
+                                        if (date) {
+                                            const formatted = `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+                                            field.onChange(formatted);
+                                        } else {
+                                            field.onChange('');
+                                        }
                                     }}
+                                    dateFormat="dd MMMM yyyy"
+                                    filterDate={(date: Date) => !isWeekendOrHoliday(date)}
+                                    showIcon
                                 />
                                 {fieldState.error && (
                                     <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem' }}>{fieldState.error.message}</p>
@@ -224,16 +249,20 @@ export default function IzinFormPGView({ props, alurkerjaParams }: AlurkerjaMfeI
                             rules={{ required: !customHours ? 'Tanggal selesai wajib diisi' : false }}
                             render={({ field, fieldState }) => (
                                 <div>
-                                    <Input
-                                        type="date"
-                                        style={{ fontSize: '16px', width: '100%' }}
-                                        min={convertDDMMYYYYToYYYYMMDD(tanggalMulai || '')}
-                                        value={convertDDMMYYYYToYYYYMMDD(field.value || '')}
-                                        onChange={(e) => {
-                                            const yyyyMMdd = e.target.value;
-                                            const ddMMyyyy = convertYYYYMMDDToDDMMYYYY(yyyyMMdd);
-                                            field.onChange(ddMMyyyy);
+                                    <InputDate
+                                        selected={field.value ? parseDateFromDDMMYYYY(field.value) : null}
+                                        onChange={(date: Date | null | undefined) => {
+                                            if (date) {
+                                                const formatted = `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${date.getFullYear()}`;
+                                                field.onChange(formatted);
+                                            } else {
+                                                field.onChange('');
+                                            }
                                         }}
+                                        dateFormat="dd MMMM yyyy"
+                                        filterDate={(date: Date) => !isWeekendOrHoliday(date)}
+                                        minDate={tanggalMulai ? parseDateFromDDMMYYYY(tanggalMulai) || undefined : undefined}
+                                        showIcon
                                     />
                                     {fieldState.error && (
                                         <p style={{ fontSize: '0.75rem', color: '#ef4444', marginTop: '0.25rem' }}>{fieldState.error.message}</p>

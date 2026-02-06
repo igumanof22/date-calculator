@@ -232,9 +232,11 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
 
                     // Subtract 1 hour for lunch break (istirahat)
                     diffHours = Math.max(0, diffHours - breakTime);
+                    diffHours = Math.round(diffHours * 10) / 10;
+                    let diffDays = Math.round((diffHours / 8) * 100) / 100;
 
-                    setValue('durasiJam', Math.round(diffHours * 10) / 10); // Round to 1 decimal
-                    setValue('durasiHari', 0);
+                    setValue('durasiJam', diffHours); // Round to 1 decimal
+                    setValue('durasiHari', diffDays);
                 } else {
                     setValue('durasiJam', 0);
                     setValue('durasiHari', 0);

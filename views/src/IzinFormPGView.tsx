@@ -21,8 +21,6 @@ export default function IzinFormPGView({ props, alurkerjaParams }: AlurkerjaMfeI
         // Check if it's a national holiday in Indonesia
         const holidays = hd.isHoliday(date);
         return holidays && holidays.length > 0;
-
-
     };
 
     // Helper function to parse dd-MM-yyyy to Date
@@ -46,22 +44,66 @@ export default function IzinFormPGView({ props, alurkerjaParams }: AlurkerjaMfeI
     const durasiHari = watch('durasiHari') || 0;
 
     // Generate time options (08:00 - 17:00, every 30 minutes)
+    // useMemo to recalculate when tanggalMulai changes
     const jamMulaiOptions = useMemo(() => {
-        const times: string[] = [];
-        let currentHour = 8;
-        let currentMinute = 0;
+        const generateTimeOptions = () => {
+            const times: string[] = [];
+            let currentHour: number;
+            let currentMinute: number;
 
-        while (currentHour <= 17) {
-            if (currentHour === 17 && currentMinute > 0) break;
-            times.push(`${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`);
-            currentMinute += 30;
-            if (currentMinute >= 60) {
-                currentMinute = 0;
-                currentHour += 1;
+            // Check if selected date is today
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+            let isToday = false;
+            if (tanggalMulai) {
+                const selectedDate = parseDateFromDDMMYYYY(tanggalMulai);
+                if (selectedDate) {
+                    // Compare only year, month, and day
+                    isToday = selectedDate.getFullYear() === today.getFullYear() &&
+                        selectedDate.getMonth() === today.getMonth() &&
+                        selectedDate.getDate() === today.getDate();
+                }
             }
-        }
-        return times;
-    }, []);
+
+            if (isToday) {
+                // Start from current time rounded to next 30-minute interval
+                const nowHour = now.getHours();
+                const nowMinute = now.getMinutes();
+
+                // Round up to next 30-minute interval
+                if (nowMinute <= 30) {
+                    currentHour = nowHour;
+                    currentMinute = 30;
+                } else {
+                    currentHour = nowHour + 1;
+                    currentMinute = 0;
+                }
+
+                // If current time is after 17:00 or before 08:00, start from 08:00
+                if (currentHour < 8 || currentHour > 17) {
+                    currentHour = 8;
+                    currentMinute = 0;
+                }
+            } else {
+                // For other dates (past or future), start from 08:00
+                currentHour = 8;
+                currentMinute = 0;
+            }
+
+            while (currentHour <= 17) {
+                if (currentHour === 17 && currentMinute > 0) break;
+                times.push(`${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`);
+                currentMinute += 30;
+                if (currentMinute >= 60) {
+                    currentMinute = 0;
+                    currentHour += 1;
+                }
+            }
+            return times;
+        };
+        return generateTimeOptions();
+    }, [tanggalMulai]); // Re-calculate when tanggalMulai changes
 
     // Generate jam selesai options based on jam mulai
     const jamSelesaiOptions = useMemo(() => {
@@ -89,6 +131,14 @@ export default function IzinFormPGView({ props, alurkerjaParams }: AlurkerjaMfeI
         }
         return times;
     }, [jamMulai]);
+
+    // Reset jamMulai if current selection is not available in new options
+    useEffect(() => {
+        if (customHours && jamMulai && !jamMulaiOptions.includes(jamMulai)) {
+            setValue('jamMulai', '');
+            setValue('jamSelesai', '');
+        }
+    }, [tanggalMulai, jamMulaiOptions, jamMulai, customHours, setValue]);
 
     // Reset jamSelesai if current selection is not available in new options
     useEffect(() => {

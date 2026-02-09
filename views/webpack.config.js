@@ -1,4 +1,5 @@
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const webpack = require('webpack');
 const { ModuleFederationPlugin } = require('webpack').container;
 const path = require('path');
 
@@ -33,6 +34,10 @@ module.exports = {
     ]
   },
   plugins: [
+    new webpack.IgnorePlugin({
+      resourceRegExp: /^\.\/locale$/,
+      contextRegExp: /moment$/
+    }),
     new ModuleFederationPlugin({
       name: 'date_calculator',
       filename: 'remoteEntry.js',

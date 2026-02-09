@@ -21,8 +21,6 @@ export default function IzinFormView({ props, alurkerjaParams }: AlurkerjaMfeInp
         // Check if it's a national holiday in Indonesia
         const holidays = hd.isHoliday(date);
         return holidays && holidays.length > 0;
-
-
     };
 
     // Helper function to parse dd-MM-yyyy to Date

@@ -2,7 +2,7 @@
     "name": "Date Calculator",
     "addon_key": "date-calculator",
     "addon_tags" :["form"],
-    "version": "4.0.3",
+    "version": "4.0.4",
     "description": "An addon that provides date calculation functionalities including adding or subtracting days, weeks, months, or years from a given date.",
     "author": "MIG-II",
     "license": "MIT",

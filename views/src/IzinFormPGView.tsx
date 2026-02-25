@@ -66,30 +66,8 @@ export default function IzinFormPGView({ props, alurkerjaParams }: AlurkerjaMfeI
                 }
             }
 
-            if (isToday) {
-                // Start from current time rounded to next 30-minute interval
-                const nowHour = now.getHours();
-                const nowMinute = now.getMinutes();
-
-                // Round up to next 30-minute interval
-                if (nowMinute <= 30) {
-                    currentHour = nowHour;
-                    currentMinute = 30;
-                } else {
-                    currentHour = nowHour + 1;
-                    currentMinute = 0;
-                }
-
-                // If current time is after 17:00 or before 08:00, start from 08:00
-                if (currentHour < 8 || currentHour > 17) {
-                    currentHour = 8;
-                    currentMinute = 0;
-                }
-            } else {
-                // For other dates (past or future), start from 08:00
-                currentHour = 8;
-                currentMinute = 0;
-            }
+            currentHour = 8;
+            currentMinute = 0;
 
             while (currentHour <= 17) {
                 if (currentHour === 17 && currentMinute > 0) break;
